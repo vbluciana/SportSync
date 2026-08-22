@@ -1,0 +1,4 @@
+/* Estilos globales del proyecto; aquí se cargan los estilos base de Tailwind y utilidades generales. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
