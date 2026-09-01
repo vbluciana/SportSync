@@ -9,7 +9,8 @@ import CanchasView from './views/CanchasView'
 import ConvocatoriasView from './views/ConvocatoriasView'
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  // NUEVO: Verificamos si existe un token en la memoria. !! lo convierte en true/false
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [userRole, setUserRole] = useState('DT')
@@ -18,18 +19,21 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState('2026-09-20')
   const [selectedMatch, setSelectedMatch] = useState(null)
 
-  const handleLogin = (e) => {
-    e.preventDefault()
+  const handleLogin = () => {
     setIsAuthenticated(true)
   }
 
+  // NUEVO: Logout real destruyendo la sesión
   const handleLogout = () => {
-    setIsAuthenticated(false)
+    localStorage.removeItem('token') // Borramos el token
+    localStorage.removeItem('usuario') // Borramos los datos del usuario
+    setIsAuthenticated(false) // Devolvemos al usuario al Login
     setEmail('')
     setPassword('')
     setSelectedMatch(null)
   }
 
+  // Si no está autenticado, mostramos LoginView
   if (!isAuthenticated) {
     return (
       <LoginView 
@@ -44,6 +48,7 @@ export default function App() {
     )
   }
 
+  // Si está autenticado, mostramos el sistema
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-between max-w-md mx-auto border-x border-slate-200 font-sans">
       <Header userRole={userRole} onLogout={handleLogout} />
