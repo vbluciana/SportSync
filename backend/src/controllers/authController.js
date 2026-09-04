@@ -1,4 +1,4 @@
-const { supabase } = require('../config/supabaseClient');
+const { supabase, supabaseAuth } = require('../config/supabaseClient');
 
 const login = async (req, res) => {
   // 1. Extraemos los datos que nos manda el frontend
@@ -16,22 +16,39 @@ const login = async (req, res) => {
 
   try {
     // 3. Le pedimos a Supabase que intente iniciar sesión con esos datos
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabaseAuth.auth.signInWithPassword({
       email: email,
       password: password,
     });
 
     // 4. Si Supabase devuelve un error (ej. contraseña mal), respondemos con error 401.
     if (error) {
+      console.error('Error de Supabase autenticando:', error.message, 'status:', error.status);
       return res.status(401).json({ status: 'error', mensaje: 'Credenciales inválidas' });
     }
 
-    // LOG 2: Ver la respuesta exacta del motor de Supabase
-    if (error) {
-      console.error('Error devuelto por Supabase Auth:', error.message);
-      console.error('Código / Status del error:', error.status);
-      return res.status(401).json({ status: 'error', mensaje: 'Credenciales inválidas' });
+    const { data: usuario, error: usuarioError } = await supabase
+      .from('usuarios')
+      .select('id_usuario, nombre, apellido, email, rol_id, estado_activo')
+      .eq('id_usuario', data.user.id)
+      .single();
+
+    if (usuarioError || !usuario) {
+        console.error('Perfil no encontrado para auth.users.id:', data.user.id);
+        console.error('Detalle de consulta a usuarios:', usuarioError?.message || 'La consulta no devolvió filas');
+      return res.status(403).json({ status: 'error', mensaje: 'El usuario no tiene un perfil configurado' });
     }
+
+    if (!usuario.estado_activo) {
+      return res.status(403).json({ status: 'error', mensaje: 'El usuario está inactivo' });
+    }
+
+    const nombresDeRol = {
+      1: 'COORDINADOR',
+      2: 'DT',
+      3: 'PF',
+      4: 'JUGADORA'
+    };
 
     console.log('Login exitoso en Supabase. ID Usuario:', data.user.id);
 
@@ -40,9 +57,12 @@ const login = async (req, res) => {
       status: 'success',
       token: data.session.access_token,
       usuario: {
-        id: data.user.id,
-        email: data.user.email,
-        rol: data.user.user_metadata?.rol_sistema || 'DT'
+        id: usuario.id_usuario,
+        email: usuario.email || data.user.email,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        rol_id: usuario.rol_id,
+        rol: nombresDeRol[usuario.rol_id] || 'SIN_ROL'
       }
     });
 

@@ -25,7 +25,7 @@ export default function LoginView({
       localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
 
       // 3. Avisamos a la app que ya entramos
-      onLogin();
+      onLogin(response.data.usuario);
 
     } catch (error) {
       // 4. Si falla, capturamos el mensaje del backend y lo mostramos
@@ -42,7 +42,7 @@ export default function LoginView({
         
         <div className="text-center mb-6">
           <div className="w-20 h-20 mx-auto mb-3 flex items-center justify-center">
-            <img src="/icons/icon-192x192.png" alt="Logo" className="w-full h-full object-contain rounded-2xl" />
+            <img src="/icons/logo-login.png" alt="Logo de SportSync" className="w-full h-full object-contain rounded-2xl" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">SportSync</h1>
         </div>
@@ -79,7 +79,7 @@ export default function LoginView({
           <button 
             type="submit" 
             disabled={cargando}
-            className="w-full py-3 bg-[#0288D1] text-white font-bold rounded-xl shadow-lg mt-2"
+            className="w-full py-3 bg-[#076A9F] text-white font-bold rounded-xl shadow-lg mt-2"
           >
             {cargando ? 'Ingresando...' : 'Iniciar Sesión'}
           </button>

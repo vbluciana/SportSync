@@ -8,7 +8,7 @@ export default function ConvocatoriasView() {
       
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[#0288D1]">Sub-16 Femenino</span>
+          <span className="text-xs font-bold text-[#076A9F]">Sub-16 Femenino</span>
           <span className="text-[11px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full">
             Cierra en 24 hs
           </span>
