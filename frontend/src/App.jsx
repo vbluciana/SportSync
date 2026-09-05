@@ -26,6 +26,7 @@ export default function App() {
   const handleLogin = (user) => {
     setCurrentUser(user)
     setUserRole(user.rol)
+    setCurrentTab('partidos')
     setIsAuthenticated(true)
   }
 
@@ -37,6 +38,7 @@ export default function App() {
     setIsAuthenticated(false) // Devolvemos al usuario al Login
     setEmail('')
     setPassword('')
+    setCurrentTab('partidos')
     setSelectedMatch(null)
   }
 

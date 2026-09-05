@@ -37,7 +37,7 @@ export default function LoginView({
   };
 
   return (
-    <main className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
+    <main className="min-h-screen bg-white flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 border border-slate-100">
         
         <div className="text-center mb-6">

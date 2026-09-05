@@ -5,6 +5,7 @@ import { Bell, LogOut, UserRound, X } from 'lucide-react'
 
 export default function Header({ user, userRole, onLogout }) {
   const [showProfile, setShowProfile] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   const displayName = user?.nombre || 'Usuario'
   const lastName = user?.apellido || ''
@@ -41,7 +42,7 @@ export default function Header({ user, userRole, onLogout }) {
           <UserRound size={18} />
         </button>
         <button 
-          onClick={onLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           title="Cerrar Sesión" 
           aria-label="Cerrar sesión"
           className="p-2 hover:bg-white/10 rounded-lg transition text-sky-100 hover:text-white"
@@ -64,6 +65,36 @@ export default function Header({ user, userRole, onLogout }) {
           <div className="space-y-2 pt-3 text-xs text-slate-600">
             <p><span className="font-semibold text-slate-800">Email:</span> {user?.email || 'No disponible'}</p>
             <p><span className="font-semibold text-slate-800">Rol:</span> {userRole}</p>
+          </div>
+        </div>
+      )}
+
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-title"
+            className="w-full max-w-xs rounded-2xl border border-slate-200 bg-white p-4 text-slate-800 shadow-2xl"
+          >
+            <h2 id="logout-title" className="text-base font-black text-slate-900">¿Cerrar sesión?</h2>
+            <p className="mt-2 text-xs text-slate-500">Tendrás que iniciar sesión nuevamente para acceder a SportSync.</p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="flex-1 rounded-xl bg-[#076A9F] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#065a87]"
+              >
+                Cerrar sesión
+              </button>
+            </div>
           </div>
         </div>
       )}
