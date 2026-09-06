@@ -2,6 +2,26 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { CheckCircle2, LoaderCircle, Mail, Phone, Search, TriangleAlert } from 'lucide-react';
 
+const EMPTY_FORM = {
+  nombre: '',
+  apellido: '',
+  dni: '',
+  email: '',
+  telefono: '',
+  rol_id: '',
+  password: ''
+};
+
+const FIELD_FILTERS = {
+  nombre: /[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]/g,
+  apellido: /[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]/g,
+  dni: /\D/g,
+  telefono: /\D/g
+};
+
+const NAME_PATTERN = /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]{2,40}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
@@ -11,12 +31,47 @@ export default function UserManagement() {
   const [saving, setSaving] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [feedback, setFeedback] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
   
-  const [formData, setFormData] = useState({
-    nombre: '', apellido: '', dni: '', email: '', telefono: '', rol_id: '', categoria: '', password: ''
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
+
+  const updateField = (field, value) => {
+    const filteredValue = FIELD_FILTERS[field] ? value.replace(FIELD_FILTERS[field], '') : value;
+    setFormData(current => ({ ...current, [field]: filteredValue }));
+    setFieldErrors(current => ({ ...current, [field]: '' }));
+  };
+
+  const updatePlainField = (field, value) => {
+    setFormData(current => ({ ...current, [field]: value }));
+    setFieldErrors(current => ({ ...current, [field]: '' }));
+  };
+
+  const resetForm = () => {
+    setFormData(EMPTY_FORM);
+    setFieldErrors({});
+    setIsEditing(false);
+    setEditId(null);
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.nombre.trim()) errors.nombre = 'El nombre es obligatorio.';
+    else if (!NAME_PATTERN.test(formData.nombre.trim())) errors.nombre = 'Usá solo letras y entre 2 y 40 caracteres.';
+    if (!formData.apellido.trim()) errors.apellido = 'El apellido es obligatorio.';
+    else if (!NAME_PATTERN.test(formData.apellido.trim())) errors.apellido = 'Usá solo letras y entre 2 y 40 caracteres.';
+    if (!/^\d{7,8}$/.test(formData.dni.trim())) errors.dni = 'Ingresá entre 7 y 8 dígitos numéricos.';
+    if (!formData.email.trim()) errors.email = 'El correo es obligatorio.';
+    else if (!EMAIL_PATTERN.test(formData.email.trim())) errors.email = 'Ingresá un correo electrónico válido.';
+    if (!formData.telefono.trim()) errors.telefono = 'El teléfono es obligatorio.';
+    if (!isEditing && !formData.password) errors.password = 'La contraseña es obligatoria.';
+    else if (!isEditing && formData.password.length < 6) errors.password = 'Usá al menos 6 caracteres.';
+    if (!formData.rol_id) errors.rol_id = 'Seleccioná un rol.';
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -37,21 +92,30 @@ export default function UserManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) {
+      setFeedback({ type: 'error', message: 'Revisá los campos marcados antes de continuar.' });
+      return;
+    }
     setSaving(true);
     setFeedback(null);
+    const successMessage = isEditing
+      ? 'Los cambios se guardaron correctamente.'
+      : 'El nuevo usuario se dio de alta correctamente.';
     try {
       if (isEditing) {
         await api.put(`/users/${editId}`, formData);
       } else {
         await api.post('/users', formData);
       }
-      setFormData({ nombre: '', apellido: '', dni: '', email: '', telefono: '', rol_id: '', categoria: '', password: '' });
-      setIsEditing(false);
+      resetForm();
       setShowForm(false);
       fetchUsers();
-      setFeedback({ type: 'success', message: isEditing ? 'Los cambios se guardaron correctamente.' : 'El nuevo usuario se dio de alta correctamente.' });
+      setFeedback({ type: 'success', message: successMessage });
       window.setTimeout(() => setFeedback(null), 3500);
     } catch (err) {
+      if (err.response?.status === 409) {
+        setFieldErrors(current => ({ ...current, email: 'Ya hay una cuenta creada con ese mail.' }));
+      }
       setFeedback({ type: 'error', message: err.response?.data?.mensaje || 'No se pudo guardar el usuario.' });
     } finally {
       setSaving(false);
@@ -85,7 +149,7 @@ export default function UserManagement() {
           <p className="text-xs text-gray-500">Gestión de integrantes SportSync</p>
         </div>
         <button 
-          onClick={() => { setIsEditing(false); setFormData({ nombre: '', apellido: '', dni: '', email: '', telefono: '', rol_id: '', categoria: '', password: '' }); setShowForm(!showForm); }}
+          onClick={() => { resetForm(); setShowForm(current => !current); }}
           className="bg-sky-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm active:scale-95 transition"
         >
           {showForm ? 'Cancelar' : '+ Nuevo'}
@@ -106,43 +170,50 @@ export default function UserManagement() {
         </div>
       )}
 
-      {/* Formulario desplegable optimizado para móvil */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white p-4 shadow-lg rounded-2xl mb-6 border border-gray-100 space-y-3 animate-fadeIn">
+        <form onSubmit={handleSubmit} noValidate className="bg-white p-4 shadow-lg rounded-2xl mb-6 border border-gray-100 space-y-3 animate-fadeIn">
           <h2 className="text-sm font-bold text-gray-700 mb-2">{isEditing ? 'Editar Integrante' : 'Dar de Alta Integrante'}</h2>
           
           <div className="grid grid-cols-2 gap-2">
-            <input type="text" placeholder="Nombre" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} required className="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50" />
-            <input type="text" placeholder="Apellido" value={formData.apellido} onChange={e => setFormData({...formData, apellido: e.target.value})} required className="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50" />
+            <div>
+              <input type="text" placeholder="Nombre" value={formData.nombre} onChange={e => updateField('nombre', e.target.value)} maxLength={40} aria-invalid={Boolean(fieldErrors.nombre)} className={`w-full border p-2.5 rounded-xl text-sm bg-gray-50 ${fieldErrors.nombre ? 'border-rose-400' : 'border-gray-200'}`} />
+              {fieldErrors.nombre && <p className="mt-1 text-xs text-rose-600">{fieldErrors.nombre}</p>}
+            </div>
+            <div>
+              <input type="text" placeholder="Apellido" value={formData.apellido} onChange={e => updateField('apellido', e.target.value)} maxLength={40} aria-invalid={Boolean(fieldErrors.apellido)} className={`w-full border p-2.5 rounded-xl text-sm bg-gray-50 ${fieldErrors.apellido ? 'border-rose-400' : 'border-gray-200'}`} />
+              {fieldErrors.apellido && <p className="mt-1 text-xs text-rose-600">{fieldErrors.apellido}</p>}
+            </div>
           </div>
 
-          <input type="text" placeholder="DNI" value={formData.dni} onChange={e => setFormData({...formData, dni: e.target.value})} required className="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50" />
-          <input type="email" placeholder="Correo Electrónico" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required className="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50" />
-          <input type="text" placeholder="Teléfono" value={formData.telefono} onChange={e => setFormData({...formData, telefono: e.target.value})} className="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50" />
+          <div>
+            <input type="text" inputMode="numeric" placeholder="DNI (7 u 8 dígitos)" value={formData.dni} onChange={e => updateField('dni', e.target.value)} maxLength={8} aria-invalid={Boolean(fieldErrors.dni)} className={`w-full border p-2.5 rounded-xl text-sm bg-gray-50 ${fieldErrors.dni ? 'border-rose-400' : 'border-gray-200'}`} />
+            {fieldErrors.dni && <p className="mt-1 text-xs text-rose-600">{fieldErrors.dni}</p>}
+          </div>
+          <div>
+            <input type="email" placeholder="Correo Electrónico" value={formData.email} onChange={e => updatePlainField('email', e.target.value.toLowerCase())} maxLength={100} aria-invalid={Boolean(fieldErrors.email)} className={`w-full border p-2.5 rounded-xl text-sm bg-gray-50 ${fieldErrors.email ? 'border-rose-400' : 'border-gray-200'}`} />
+            {fieldErrors.email && <p className="mt-1 text-xs text-rose-600">{fieldErrors.email}</p>}
+          </div>
+          <div>
+            <input type="text" inputMode="numeric" placeholder="Teléfono" value={formData.telefono} onChange={e => updateField('telefono', e.target.value)} aria-invalid={Boolean(fieldErrors.telefono)} className={`w-full border p-2.5 rounded-xl text-sm bg-gray-50 ${fieldErrors.telefono ? 'border-rose-400' : 'border-gray-200'}`} />
+            {fieldErrors.telefono && <p className="mt-1 text-xs text-rose-600">{fieldErrors.telefono}</p>}
+          </div>
 
           {!isEditing && (
-            <input type="password" placeholder="Contraseña Inicial" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required className="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50" />
+            <div>
+              <input type="password" placeholder="Contraseña Inicial" value={formData.password} onChange={e => updatePlainField('password', e.target.value)} aria-invalid={Boolean(fieldErrors.password)} className={`w-full border p-2.5 rounded-xl text-sm bg-gray-50 ${fieldErrors.password ? 'border-rose-400' : 'border-gray-200'}`} />
+              {fieldErrors.password && <p className="mt-1 text-xs text-rose-600">{fieldErrors.password}</p>}
+            </div>
           )}
 
-          <select value={formData.rol_id} onChange={e => setFormData({...formData, rol_id: e.target.value})} required className="w-full border border-gray-200 p-2.5 rounded-xl text-sm bg-gray-50 text-gray-700">
-            <option value="">Seleccionar Rol</option>
-            <option value="1">Coordinador General</option>
-            <option value="2">Director Técnico (DT)</option>
-            <option value="3">Preparador Físico (PF)</option>
-            <option value="4">Jugadora</option>
-          </select>
-
-          {/* Criterio de Aceptación: Categoría específica para jugadoras */}
-          {String(formData.rol_id) === '4' && (
-            <input
-              type="text"
-              placeholder="Escribir categoría (ej. Sub-16 femenino)"
-              value={formData.categoria || ''}
-              onChange={e => setFormData({...formData, categoria: e.target.value})}
-              required
-              className="w-full border border-sky-200 p-2.5 rounded-xl text-sm bg-sky-50 text-sky-900 placeholder:text-sky-400 focus:ring-2 focus:ring-sky-500 outline-none"
-            />
-          )}
+          <div>
+            <select value={formData.rol_id} onChange={e => updatePlainField('rol_id', e.target.value)} aria-invalid={Boolean(fieldErrors.rol_id)} className={`w-full border p-2.5 rounded-xl text-sm bg-gray-50 text-gray-700 ${fieldErrors.rol_id ? 'border-rose-400' : 'border-gray-200'}`}>
+              <option value="">Seleccionar Rol</option>
+              <option value="2">Director Técnico (DT)</option>
+              <option value="3">Preparador Físico (PF)</option>
+                {isEditing && formData.rol_id === '4' && <option value="4">Jugadora</option>}
+            </select>
+            {fieldErrors.rol_id && <p className="mt-1 text-xs text-rose-600">{fieldErrors.rol_id}</p>}
+          </div>
 
           {saving && (
             <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800" role="status">
@@ -158,7 +229,6 @@ export default function UserManagement() {
         </form>
       )}
 
-      {/* Buscador y Filtro superior */}
       <div className="space-y-2 mb-4">
         <div className="relative">
         <input 
@@ -179,7 +249,6 @@ export default function UserManagement() {
         </select>
       </div>
 
-      {/* Lista en formato Cards Mobile (Reemplaza la tabla tradicional) */}
       <div className="space-y-3">
         {loadingUsers && (
           <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white py-10 text-sm font-medium text-slate-500" role="status">
@@ -216,10 +285,10 @@ export default function UserManagement() {
                   <Phone size={14} className="text-sky-600 shrink-0" aria-hidden="true" />
                   <span>{user.telefono || 'Sin teléfono registrado'}</span>
                 </div>
-                {user.categoria && (
+                {user.plantel_id && (
                   <div className="flex items-center gap-2">
-                    <span className="w-3.5 text-center text-sky-600 font-bold" aria-hidden="true">C</span>
-                    <span>Categoría: {user.categoria}</span>
+                    <span className="w-3.5 text-center text-sky-600 font-bold" aria-hidden="true">P</span>
+                    <span>Plantel asignado</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
@@ -231,7 +300,7 @@ export default function UserManagement() {
 
             <div className="flex justify-end items-center pt-1">
               <div className="flex gap-2">
-                  <button onClick={(event) => { event.stopPropagation(); setIsEditing(true); setEditId(user.id_usuario); setFormData(user); setShowForm(true); }} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-medium active:bg-gray-200">
+                  <button onClick={(event) => { event.stopPropagation(); setFieldErrors({}); setIsEditing(true); setEditId(user.id_usuario); setFormData(user); setShowForm(true); }} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-medium active:bg-gray-200">
                   Editar
                 </button>
                 {user.estado_activo && (

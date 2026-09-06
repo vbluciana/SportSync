@@ -4,6 +4,7 @@ import Header from './components/Header'
 import BottomNav from './components/BottomNav'
 import MatchDetailModal from './components/MatchDetailModal'
 import LoginView from './views/LoginView'
+import RegisterView from './views/RegisterView'
 import PartidosView from './views/PartidosView'
 import CanchasView from './views/CanchasView'
 import ConvocatoriasView from './views/ConvocatoriasView'
@@ -16,6 +17,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showRegister, setShowRegister] = useState(false)
   const [userRole, setUserRole] = useState(storedUser?.rol || 'DT')
   const [currentUser, setCurrentUser] = useState(storedUser)
 
@@ -24,6 +26,7 @@ export default function App() {
   const [selectedMatch, setSelectedMatch] = useState(null)
 
   const handleLogin = (user) => {
+    setShowRegister(false)
     setCurrentUser(user)
     setUserRole(user.rol)
     setIsAuthenticated(true)
@@ -42,15 +45,16 @@ export default function App() {
 
   // Si no está autenticado, mostramos LoginView
   if (!isAuthenticated) {
+    if (showRegister) return <RegisterView onBack={() => setShowRegister(false)} />
+
     return (
       <LoginView 
         email={email}
         setEmail={setEmail}
         password={password}
         setPassword={setPassword}
-        userRole={userRole}
-        setUserRole={setUserRole}
         onLogin={handleLogin}
+        onShowRegister={() => setShowRegister(true)}
       />
     )
   }

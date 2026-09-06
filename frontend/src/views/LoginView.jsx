@@ -2,9 +2,7 @@ import React, { useState } from 'react'
 import { Mail, Lock } from 'lucide-react'
 import api from '../services/api' // NUEVO: Importamos nuestro cartero
 
-export default function LoginView({
-  email, setEmail, password, setPassword, userRole, setUserRole, onLogin
-}) {
+export default function LoginView({ email, setEmail, password, setPassword, onLogin, onShowRegister }) {
   const [errorMensaje, setErrorMensaje] = useState(''); // Estado para guardar errores
   const [cargando, setCargando] = useState(false); // Para el spinner del botón
 
@@ -82,6 +80,9 @@ export default function LoginView({
             className="w-full py-3 bg-[#076A9F] text-white font-bold rounded-xl shadow-lg mt-2"
           >
             {cargando ? 'Ingresando...' : 'Iniciar Sesión'}
+          </button>
+          <button type="button" onClick={onShowRegister} className="w-full text-sm font-semibold text-[#076A9F] hover:underline">
+            Crear cuenta
           </button>
         </form>
       </div>
