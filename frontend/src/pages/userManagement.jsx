@@ -64,7 +64,7 @@ export default function UserManagement() {
     if (!/^\d{7,8}$/.test(formData.dni.trim())) errors.dni = 'Ingresá entre 7 y 8 dígitos numéricos.';
     if (!formData.email.trim()) errors.email = 'El correo es obligatorio.';
     else if (!EMAIL_PATTERN.test(formData.email.trim())) errors.email = 'Ingresá un correo electrónico válido.';
-    if (!formData.telefono.trim()) errors.telefono = 'El teléfono es obligatorio.';
+    if (!/^\d{10,}$/.test(formData.telefono.trim())) errors.telefono = 'El teléfono debe tener al menos 10 dígitos.';
     if (!isEditing && !formData.password) errors.password = 'La contraseña es obligatoria.';
     else if (!isEditing && formData.password.length < 6) errors.password = 'Usá al menos 6 caracteres.';
     if (!formData.rol_id) errors.rol_id = 'Seleccioná un rol.';
@@ -210,7 +210,7 @@ export default function UserManagement() {
               <option value="">Seleccionar Rol</option>
               <option value="2">Director Técnico (DT)</option>
               <option value="3">Preparador Físico (PF)</option>
-                {isEditing && formData.rol_id === '4' && <option value="4">Jugadora</option>}
+                {isEditing && formData.rol_id === '4' && <option value="4">Jugador</option>}
             </select>
             {fieldErrors.rol_id && <p className="mt-1 text-xs text-rose-600">{fieldErrors.rol_id}</p>}
           </div>
@@ -245,7 +245,7 @@ export default function UserManagement() {
           <option value="1">Coordinadores</option>
           <option value="2">Directores Técnicos</option>
           <option value="3">Preparadores Físicos</option>
-          <option value="4">Jugadoras</option>
+          <option value="4">Jugadores</option>
         </select>
       </div>
 

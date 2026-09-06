@@ -9,6 +9,7 @@ import PartidosView from './views/PartidosView'
 import CanchasView from './views/CanchasView'
 import ConvocatoriasView from './views/ConvocatoriasView'
 import UserManagement from './pages/userManagement'
+import ProfileModal from './components/ProfileModal'
 
 const storedUser = JSON.parse(localStorage.getItem('usuario') || 'null')
 
@@ -24,12 +25,21 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState('partidos')
   const [selectedDate, setSelectedDate] = useState('2026-09-20')
   const [selectedMatch, setSelectedMatch] = useState(null)
+  const [showProfileEditor, setShowProfileEditor] = useState(false)
 
   const handleLogin = (user) => {
     setShowRegister(false)
     setCurrentUser(user)
     setUserRole(user.rol)
     setIsAuthenticated(true)
+    if (user.rol === 'JUGADOR') setCurrentTab('partidos')
+  }
+
+  const handleProfileUpdated = (updatedUser) => {
+    const nextUser = { ...currentUser, ...updatedUser, rol: currentUser.rol, rol_id: currentUser.rol_id }
+    setCurrentUser(nextUser)
+    localStorage.setItem('usuario', JSON.stringify(nextUser))
+    setShowProfileEditor(false)
   }
 
   // NUEVO: Logout real destruyendo la sesión
@@ -62,7 +72,7 @@ export default function App() {
   // Si está autenticado, mostramos el sistema
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-between max-w-md mx-auto border-x border-slate-200 font-sans">
-      <Header user={currentUser} userRole={userRole} onLogout={handleLogout} />
+      <Header user={currentUser} userRole={userRole} onLogout={handleLogout} onEditProfile={() => setShowProfileEditor(true)} />
 
       <main className="p-4 flex-1 overflow-y-auto space-y-4">
         {currentTab === 'partidos' && (
@@ -82,6 +92,14 @@ export default function App() {
         selectedDate={selectedDate} 
         onClose={() => setSelectedMatch(null)} 
       />
+
+      {showProfileEditor && (
+        <ProfileModal
+          user={currentUser}
+          onClose={() => setShowProfileEditor(false)}
+          onUpdated={handleProfileUpdated}
+        />
+      )}
 
       <BottomNav currentTab={currentTab} setCurrentTab={setCurrentTab} userRole={userRole} />
     </div>

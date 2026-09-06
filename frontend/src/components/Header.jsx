@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Bell, LogOut, TriangleAlert, UserRound, X } from 'lucide-react'
 
-export default function Header({ user, userRole, onLogout }) {
+export default function Header({ user, userRole, onLogout, onEditProfile }) {
   const [showProfile, setShowProfile] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
@@ -62,10 +62,12 @@ export default function Header({ user, userRole, onLogout }) {
               <X size={16} />
             </button>
           </div>
-          <div className="space-y-2 pt-3 text-xs text-slate-600">
-            <p><span className="font-semibold text-slate-800">Email:</span> {user?.email || 'No disponible'}</p>
-            <p><span className="font-semibold text-slate-800">Rol:</span> {userRole}</p>
-          </div>
+          <button
+            onClick={() => { setShowProfile(false); onEditProfile(); }}
+            className="mt-4 w-full rounded-xl bg-[#076A9F] px-3 py-2 text-xs font-bold text-white hover:bg-[#05577f]"
+          >
+            Editar perfil
+          </button>
         </div>
       )}
 

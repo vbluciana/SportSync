@@ -39,7 +39,7 @@ export default function RegisterView({ onBack }) {
     if (!namePattern.test(formData.apellido.trim())) nextErrors.apellido = 'Ingresá un apellido válido de 2 a 40 letras.';
     if (!/^\d{7,8}$/.test(formData.dni)) nextErrors.dni = 'El DNI debe tener entre 7 y 8 dígitos.';
     if (!emailPattern.test(formData.email.trim())) nextErrors.email = 'Ingresá un correo electrónico válido.';
-    if (!formData.telefono.trim()) nextErrors.telefono = 'El teléfono es obligatorio.';
+    if (!/^\d{10,}$/.test(formData.telefono.trim())) nextErrors.telefono = 'El teléfono debe tener al menos 10 dígitos.';
     if (formData.password.length < 6) nextErrors.password = 'La contraseña debe tener al menos 6 caracteres.';
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
