@@ -2,18 +2,19 @@
 
 ## Contexto
 
-SportSync es una PWA orientada a la digitalización de la infraestructura deportiva del Club Empleados Banco Nación Córdoba (CEBNAC), disciplina vóleibol. Este módulo transversal administra la seguridad, el control de acceso basado en roles (RBAC) y el padrón de usuarios institucional. El sistema debe garantizar la seguridad y privacidad de la información de distintos actores institucionales (Coordinadores, Directores Técnicos, Preparadores Físicos y Jugadores).
+SportSync es una PWA orientada a la digitalización de la infraestructura deportiva del Club Empleados Banco Nación Córdoba (CEBNAC), enfocada en la disciplina de Vóleibol (Femenino y Masculino). Este módulo transversal administra la seguridad, el control de acceso basado en roles (RBAC) y el padrón de usuarios institucional. El sistema garantiza la seguridad y privacidad de la información de los actores institucionales mediante autenticación JWT y políticas Row Level Security (RLS) en Supabase. 
 
+*Nota de Negocio:* El sistema gestiona exclusivamente a las y los Jugadores; en el caso de deportistas menores, la cuenta es responsabilidad legal del tutor, pero no existe ni debe existir interfaz, entidad ni rol para tutores en la base de datos.
 ---
 
 ## Usuarios (Roles)
 
 | Rol | Descripción |
 |-----|-------------|
-| **Coordinador** | Acceso de lectura global al tablero de canchas y al calendario de ambas ramas (Femenina y Masculina). Gestión de usuarios (excepto alta de jugadores). |
-| **Director Técnico (DT)** | Reserva y liberación de canchas únicamente para las categorías y ramas que tiene asignadas. Carga de partidos recibidos por el canal de WhatsApp FCV. Emisión de convocatorias a partidos. Recepción de notificaciones push en el celular. Monitoreo del dashboard de asistencia de su plantel en tiempo real. |
-| **Preparador Físico (PF)** | Rol estrictamente de consulta (Lectura). Consulta del tablero de ocupación de canchas y del calendario de partidos para coordinar los trabajos físicos en quincho/gimnasio sin interferir. No posee permisos para reservar canchas ni crear eventos. Recepción de notificaciones push en el celular. |
-| **Jugadores** | Consulta del calendario deportivo de su categoría. Recepción de notificaciones push en el celular. Confirmación o declinación de asistencia a partidos. |
+| **Coordinador** | Acceso de lectura global al tablero de canchas y al calendario. Gestión centralizada del padrón de usuarios (Alta de DTs y PFs, bajas lógicas y modificaciones). |
+| **Director Técnico (DT)** | Reserva y liberación de canchas únicamente para las categorías que tiene formalmente asignadas. Carga de partidos oficiales, emisión de convocatorias y visualización de su perfil |
+| **Preparador Físico (PF)** | Rol estrictamente de consulta operativa (Lectura). Visualiza la ocupación de canchas y el calendario para coordinar trabajos físicos sin interferir en las reservas |
+| **Jugador** | Rol asignado por defecto en el auto-registro público. Consulta del calendario deportivo de su categoría, actualización de perfil personal y confirmación/declinación de asistencia a partidos |
 
 ---
 
@@ -27,84 +28,109 @@ SportSync es una PWA orientada a la digitalización de la infraestructura deport
 
 ---
 
-## Requisitos Funcionales (notación EARS)
+# Módulo 1: Usuarios, Perfiles y Control de Acceso
 
-### RF-01: REGISTRO DE USUARIO
-CUANDO el jugador completa el formulario de registro con datos personales y credenciales de acceso, ENTONCES el sistema creará la cuenta de Supabase Auth y persistirá el perfil de usuario en la tabla de usuarios con rol 'jugador', campos obligatorios: nombre, apellido, email, rol_sistema, active (default: true), y campos opcionales por rol.
+## Contexto
+SportSync es una Progressive Web App (PWA) diseñada para digitalizar y centralizar la infraestructura deportiva del Club Empleados Banco Nación Córdoba (CEBNAC), abarcando la disciplina de **Vóleibol en ambas ramas (Femenina y Masculina)**. Este módulo transversal administra la seguridad, el control de acceso basado en roles (RBAC), el padrón de usuarios institucional y los cimientos de sesión segura mediante Supabase Auth (JWT) y Row Level Security (RLS).
 
-### RF-02: MODIFICACIÓN DE DATOS DE USUARIO
-CUANDO el usuario modifica su información de perfil (contacto, categorías asignadas, etc.), ENTONCES el sistema validará que el usuario tenga permiso para operar sobre el recurso (propio perfil o permiso de coordinador) y actualizará los campos modificados, retornando HTTP 200 con el perfil actualizado; si el usuario no tiene permiso, retornará HTTP 403.
-
-### RF-03: BAJA LÓGICA DE USUARIO
-CUANDO el coordinador solicita la inhabilitación de una cuenta de usuario, ENTONCES el sistema establecerá el campo `active` en `false` en la tabla de usuarios sin borrar el historial de datos asociados (partidos, asistencias, convicatorias), y retornará HTTP 200; si el usuario no existe, retornará HTTP 404.
-
-### RF-04: CONSULTA DE USUARIOS CON FILTROS
-CUANDO el coordinador busca y visualiza el listado de usuarios registrados aplicando filtros (rol, estado active, categoría), ENTONCES el sistema aplicará los filtros especificados y retornará el listado paginado; si no hay usuarios con los filtros aplicados, retornará lista vacía HTTP 200.
-
-### RF-05: REGISTRO DE INTEGRANTE STAFF TÉCNICO
-CUANDO el coordinador registra a un nuevo integrante del Staff Técnico asignando rol de Director Técnico o Preparador Físico y credenciales de acceso, ENTONCES el sistema creará la cuenta de Supabase Auth y perfil de usuario con el rol asignado, y retornará HTTP 201; si el rol asignado no es DT ni PF, retornará HTTP 400.
-
-### RF-06: INICIAR SESIÓN
-CUANDO el usuario (coordinador, DT, PF o jugador) se autentica con sus credenciales de acceso, ENTONCES el sistema verificará las credenciales contra Supabase Auth y retornará JWT token con la información de usuario (id, email, rol_sistema), y si las credenciales son inválidas, retornará HTTP 401.
-
-### RF-07: CERRAR SESIÓN
-CUANDO el usuario decide finalizar la sesión activa, ENTONCES el sistema invalidará el token JWT localmente y en el servidor, y retornará HTTP 200 con estado de éxito.
-
-### RF-08: VALIDACIÓN CONFLICTO HTTP 409
-CUANDO se intenta registrar un usuario con email que ya existe en el sistema, ENTONCES el sistema detectará el conflicto y retornará HTTP 409 con mensaje de error apropiado; si el email es único, continuará con el registro normal.
+*Nota de Negocio (Responsabilidad de Cuenta):* El sistema gestiona las cuentas de los Jugadores/as. En el caso de deportistas menores de edad, la administración y uso de la cuenta recae bajo la responsabilidad legal de sus tutores, sin crear un rol, interfaz ni entidad independiente en la base de datos.
 
 ---
 
-## Requisitos No Funcionales
+## Usuarios (Roles)
 
-| Código | Descripción |
-|--------|-------------|
-| **RNF-01**: Desacoplamiento strict | Frontend (React PWA) y backend (Node.js/Express) son proyectos totalmente independientes, comunicándose exclusivamente mediante contratos JSON sobre protocolo HTTPS. |
-| **RNF-02**: Arquitectura 3 capas | Código backend estructurado obligatoriamente en: Rutas -> Controladores (validación req/res) -> Servicios (lógica pura y base de datos). |
-| **RNF-03**: Seguridad JWT | Toda petición HTTP a rutas protegidas debe incluir el token JWT (Authorization: Bearer). El backend debe utilizar middleware `checkAuth` y `checkRole` para validar el rol del usuario; de lo contrario, debe retornar HTTP 403. |
-| **RNF-04**: Row Level Security | Toda persistencia en PostgreSQL se hará vía el SDK `@supabase/supabase-js`. La base de datos mantendrá activada la política RLS como barrera perimetral secundaria contra accesos anónimos. |
-| **RNF-05**: Mobile-First | Todas las interfaces se diseñarán bajo el concepto Mobile-First (ancho base táctil de 390px) usando Tailwind CSS. |
-| **RNF-06**: Códigos de error HTTP | Uso estricto de códigos 200, 201, 400, 401, 403, 404, 409 y 500 en formato JSON en todas las respuestas. |
-| **RNF-07**: Idioma español | Nombres de variables, identificadores y mensajes al usuario final en español. |
-| **RNF-08**: PWA Service Worker | El sistema debe implementar Service Workers (`sw.js`) para cachear recursos (App Shell) y proveer tolerancia a intermitencias de red (Offline). |
-| **RNF-09**: Tiempo de respuesta API | Los endpoints de auth y notas deben responder en menos de 2 segundos bajo carga normal. |
-| **RNF-10**: Idempotencia | Las operaciones de modificación de perfil deben ser idempotentes cuando se envían los mismos datos múltiples veces. |
+| Rol | Descripción |
+|-----|-------------|
+| **Coordinador** | Acceso de lectura global al tablero de canchas y calendario de ambas ramas. Gestión centralizada del padrón de usuarios (Alta exclusiva de DTs y PFs, bajas lógicas y modificaciones). |
+| **Director Técnico (DT)** | Reserva y liberación de canchas únicamente para las categorías y ramas que tiene asignadas. Carga de partidos oficiales FCV, emisión de convocatorias y consulta de su perfil con planteles asignados. |
+| **Preparador Físico (PF)** | Rol estrictamente de consulta operativa (Lectura). Visualiza el tablero de canchas y el calendario multirrama para coordinar trabajos físicos sin interferir en los turnos. |
+| **Jugador / Deportista** | Rol asignado por defecto en el auto-registro público. Consulta el calendario de su categoría/rama, gestiona sus datos de contacto y confirma o declina asistencia a partidos oficiales. |
 
 ---
 
-## Casos Límite
+## Historias de Usuario (Módulo 1)
+
+* **US1.1:** Como desarrolladora, quiero implementar middlewares en Express y políticas RLS en Supabase para aislar y proteger el acceso a las rutas y datos según el rol del usuario (RBAC).
+* **US1.2:** Como usuario del club (Coordinador, DT, PF o Jugador), quiero iniciar y cerrar sesión con mis credenciales (email y contraseña) para ingresar a la plataforma y mantener mi sesión persistente en la PWA.
+* **US1.3:** Como Coordinador, quiero dar de alta integrantes del cuerpo técnico (DTs y PFs), editar, consultar con filtros y dar de baja lógica a usuarios para mantener actualizado el padrón del club.
+* **US1.4:** Como Director Técnico o Jugador, quiero consultar y actualizar mis datos de perfil, verificando mi información de contacto y validando (en el caso de DT) qué planteles y ramas tengo asignadas.
+* **US1.5:** Como Jugador/a (o adulto responsable en menores), quiero auto-registrarme de forma autónoma con mis datos personales y credenciales para acceder a SportSync sin requerir la carga manual del Coordinador.
+
+---
+
+## Requisitos Funcionales (Notación EARS)
+
+### US1.5 - Auto-Registro de Jugadores
+* **RF01.1 (Evento):** CUANDO un deportista complete el formulario público de registro, ENTONCES el sistema creará la cuenta en Supabase Auth y persistirá el registro en la tabla `usuarios` forzando en el servidor de forma inmutable el `rol_id` igual a 4, que corresponde al rol `Jugador`.
+* **RF01.2 (Excepción):** SI el DNI o Email ya se encuentran registrados en el sistema, ENTONCES el backend abortará la inserción y retornará HTTP `409 Conflict` con un mensaje indicativo.
+
+### US1.3 - Gestión del Padrón por Coordinador
+* **RF02.1 (Evento):** CUANDO el Coordinador registre a un integrante del Staff Técnico asignando rol de Director Técnico o Preparador Físico, ENTONCES el sistema creará las credenciales y el perfil asociado retornando HTTP `201 Created`.
+* **RF02.2 (Excepción):** SI el Coordinador intenta registrar un usuario con un rol diferente a DT o PF mediante el endpoint administrativo, ENTONCES el sistema rechazará la solicitud con HTTP `400 Bad Request`.
+* **RF02.3 (Evento):** CUANDO el Coordinador solicite la eliminación de una cuenta, ENTONCES el sistema ejecutará una baja lógica estableciendo `estado_activo = false` preservando la integridad del historial operativo y retornando HTTP `200 OK`.
+* **RF02.4 (Ubicua):** El sistema SIEMPRE permitirá al Coordinador buscar y filtrar el listado de usuarios en tiempo real por rol, estado activo/inactivo y término de búsqueda (nombre o DNI).
+
+### US1.4 - Perfiles y Categorías Asignadas
+* **RF03.1 (Evento):** CUANDO un usuario consulte "Mi Perfil", ENTONCES el sistema mostrará sus datos personales y rol institucional.
+* **RF03.2 (Evento):** CUANDO un usuario actualice su información personal modificable, ENTONCES el sistema validará que el usuario tenga permiso para operar sobre el recurso y actualizará los campos permitidos retornando HTTP `200 OK`, y si el usuario no tiene permiso, retornará HTTP 403.
+* **RF03.3 (Estado):** MIENTRAS el usuario activo tenga rol de Director Técnico, ENTONCES el sistema listará las categorías y ramas (Femenina / Masculina) formalmente asignadas a su cargo.
+
+### US1.2 - Autenticación y Sesión PWA
+* **RF04.1 (Evento):** CUANDO el usuario ingrese credenciales válidas en la pantalla de Login, ENTONCES el sistema validará contra Supabase Auth, emitirá el token JWT y lo almacenará de forma persistente en el cliente (`localStorage`).
+* **RF04.2 (Excepción):** SI las credenciales son inválidas o la cuenta se encuentra inactiva (`estado_activo = false`), ENTONCES el sistema impedirá el acceso retornando HTTP `401 Unauthorized` y mostrará un mensaje descriptivo en la interfaz.
+* **RF04.3 (Evento):** CUANDO el usuario accione "Cerrar Sesión", ENTONCES el sistema purgará el token del almacenamiento local y redirigirá inmediatamente a la vista de Login.
+
+### US1.1 - Seguridad RBAC y RLS
+* **RF05.1 (Ubicua):** El sistema SIEMPRE validará la firma y vigencia del JWT en cada petición a rutas protegidas mediante el middleware de Express `checkAuth`.
+* **RF05.2 (Ubicua):** El sistema SIEMPRE verificará que el rol del token pertenezca al conjunto de roles autorizados mediante `checkRole` antes de delegar la ejecución al controlador.
+* **RF05.3 (Excepción):** SI una petición a un recurso protegido carece de token o éste expiró, ENTONCES el sistema denegará la solicitud con HTTP `401 Unauthorized`.
+* **RF05.4 (Excepción):** SI el usuario autenticado intenta ejecutar una operación ajena a sus privilegios, ENTONCES el sistema responderá con HTTP `403 Forbidden`.
+* **RF05.5 (Ubicua):** La base de datos en Supabase SIEMPRE mantendrá activas políticas de Row Level Security (RLS) en las tablas de usuarios y categorías como barrera perimetral secundaria.
+
+---
+
+## Requisitos No Funcionales (RNF)
 
 | Código | Descripción |
 |--------|-------------|
-| **CL-01**: Intento de registro con email ya existente | El sistema debe retorn HTTP 409 Conflict con mensaje "El email ya está registrado en el sistema". No debe crear cuenta duplicada. |
-| **CL-02**: Usuario no autenticado accede a ruta protegida | El middleware de auth debe retornar HTTP 403 Forbidden con mensaje "Acceso no autorizado - token inválido o ausente". |
-| **CL-03**: Usuario sin permiso de coordinator intenta dar de baja a otro usuario | El middleware de rol debe retornar HTTP 403 Forbidden con mensaje "No tiene permiso para realizar esta operación". |
-| **CL-04**: DT intenta modificar campos restringidos de su perfil (rol, categoría) | El sistema debe permitir la modificación de campos permisivos pero ignorar/ rechazar la modificación de campos de sistema (rol, categoría) sin permiso adecuado. |
-| **CL-05**: Consulta de usuarios sin filtros devuelve todo el plantel | Debe retornar lista paginada completa, no vacía, incluso si no se especifica filtros. |
-| **CL-06**: Baja lógica de último coordinador restante | El sistema debe prevenir la inhabilitación del último coordinador activo del club (validación de negocio). |
-| **CL-07**: Service Worker falla al registrarse en el navegador | El sistema debe manejar gracefully el caso, mostrando UI informativa pero permitiendo funcionamiento básico sin PWA features. |
+| **RNF-01** | **Desacoplamiento Estricto:** Frontend (React PWA) y Backend (Node.js/Express) son independientes, comunicándose exclusivamente vía contratos JSON sobre HTTPS. |
+| **RNF-02** | **Arquitectura en Capas:** Backend estructurado obligatoriamente en Rutas -> Controladores (validación de I/O) -> Servicios (lógica pura e interacción con Supabase). |
+| **RNF-03** | **Seguridad Stateless:** El servidor no almacena sesiones en memoria; la identidad se valida criptográficamente en cada request mediante JWT en el header `Authorization: Bearer <token>`. |
+| **RNF-04** | **PWA Mobile-First:** Todas las interfaces del módulo (Login, Auto-registro, Perfil y Padrón) deben estar maquetadas para un ancho táctil base de 390px usando Tailwind CSS. |
+| **RNF-05** | **Estandarización HTTP:** Uso estricto de códigos de respuesta 200, 201, 400, 401, 403, 404, 409 y 500 en formato JSON. |
+| **RNF-06** | **Tolerancia de Red en Cliente:** La PWA debe interceptar errores de conexión y caídas de red mediante Axios, mostrando estados visuales claros sin quebrar la interfaz. |
+
+---
+
+## Casos Límite (Edge Cases)
+
+| Código | Descripción |
+|--------|-------------|
+| **CL-01** | **Inyección maliciosa de rol en auto-registro:** Si un payload envía `{ "rol_sistema": "Coordinador" }` en `POST /api/auth/register`, el backend ignorará dicho campo y forzará inmutablemente el rol `JUGADOR`. |
+| **CL-02** | **Conflicto de duplicidad (HTTP 409):** Si se intenta registrar un DNI o Email preexistente, el sistema aborta la transacción y responde 409 con mensaje explicativo. |
+| **CL-03** | **Usuario inactivo con sesión abierta:** Si un usuario dado de baja lógica intenta realizar una petición con un token no expirado, el middleware o servicio verifica `estado_activo == false` y revoca el acceso con HTTP 401/403. |
+| **CL-04** | **Prevención de doble clic:** Los botones de submit en Login y Registro deben inhabilitarse (`disabled`) durante el procesamiento de la petición para prevenir registros duplicados por latencia. |
+| **CL-05** | **Protección del último Coordinador:** El sistema debe impedir la baja lógica del único Coordinador activo del club. |
+
+---
 
 ## [QA1] Plan de Pruebas de Seguridad RBAC, Tokens y Padrón
 
-| Código | Descripción |
-|--------|-------------|
-| **QA-01**: Acceso sin token JWT | Endpoints protegidos sin token deben retornar HTTP 403 Forbidden |
-| **QA-02**: Token vencido o inválido | Middleware debe detectar y rechazar tokens expirados con HTTP 401 |
-| **QA-03**: Elevación de privilegios | Usuario jugador no puede acceder a rutas de coordinador aún modificando su token |
-| **QA-04**: Padrón de usuarios | Verificación que el total de usuarios activos coincida con el registro en tabla de usuarios |
-| **QA-05**: Baja lógica inconsistente | Usuario dado de baja lógica no puede autenticar (token inválido) |
-| **QA-06**: Role no autorizado en token | Token con role inexistente debe ser rechazado por checkRole middleware |
-| **QA-07**: Consulta cruzada de planteles | Usuario debe ver solo jugadores de su plantel asignado según rol |
+| Código | Descripción de la Prueba |
+|--------|--------------------------|
+| **QA-01** | **Acceso sin Token:** Peticiones a endpoints privados de `/api/users` sin encabezado `Authorization` deben retornar HTTP 401. |
+| **QA-02** | **Acceso no Autorizado (RBAC):** Token con rol `Jugador` o `Director Técnico` intentando acceder a la creación/baja de usuarios en `/api/users` debe retornar HTTP 403. |
+| **QA-03** | **Persistencia de Sesión:** Tras iniciar sesión, recargar la PWA en el navegador; el estado de autenticación y datos de usuario deben permanecer intactos. |
+| **QA-04** | **Integridad de Baja Lógica:** Al ejecutar `DELETE /api/users/:id`, comprobar en la base de datos que el registro persiste con `estado_activo = false` y no se borra físicamente. |
+| **QA-05** | **Validación de Unicidad en Registro:** Intentar registrar dos veces el mismo email o DNI en `/api/auth/register` y verificar que el segundo retorne HTTP 409. |
 
 ---
 
-## Criterios de Finalización (DoD)
+## Criterios de Finalización (Definition of Done - DoD)
 
-- [ ] **Código compilable**: El backend compila sin errores y el linter pasa sin advertencias de error.
-- [ ] **Endpoints con manejo de códigos de error**: Todos los endpoints retornan los códigos HTTP 200, 201, 400, 401, 403, 404, 409 y 500 adecuadamente en formato JSON.
-- [ ] **RBAC implementado**: Middleware `checkAuth` y `checkRole` validan explícitamente el rol del usuario antes de procesar cualquier solicitud en rutas protegidas.
-- [ ] **Perfiles por rol**: La tabla de usuarios contiene el campo `active` (booleano) y el campo `rol_sistema` con valores válidos (Coordinador, DT, PF, Jugador).
-- [ ] **Registro completo**: El endpoint POST /api/auth/register crea tanto la cuenta de Supabase Auth como el registro de perfil en la tabla de usuarios.
-- [ ] **PWA compile y renderice sin errores**: La Progressive Web App compila y renderiza sin errores en consola, funciona en modo offline y está optimizada para 390px.
-- [ ] **Test de integración**: Los endpoints pasan pruebas de integración con casos límite y manejo correcto de códigos de error.
-- [ ] **Sin acoplamiento cliente-servidor**: El frontend y backend permanecen completamente independientes, comunicándose solo mediante contratos JSON sobre HTTPS.
+- [ ] **Código y Peer Review:** Código subido a GitHub en su respectiva rama, con Pull Request enlazado a la US y aprobado por la compañera.
+- [ ] **RBAC Operativo:** Middlewares `checkAuth` y `checkRole` aplicados y verificados en todos los endpoints privados del módulo.
+- [ ] **Contratos de Error JSON:** Endpoints con manejo exhaustivo de respuestas estándar (200, 201, 400, 401, 403, 404, 409).
+- [ ] **Auto-registro probado:** Creación de cuenta en Supabase Auth y persistencia simultánea en la tabla `usuarios` con rol asignado por servidor.
+- [ ] **PWA Mobile-First 390px:** Vistas de Login, Auto-registro, Perfil y Padrón probadas en viewport móvil táctil sin desbordes horizontales ni errores en consola.
+- [ ] **Plan de Pruebas QA1 Aprobado:** Casos de prueba de seguridad y padrón ejecutados satisfactoriamente.
