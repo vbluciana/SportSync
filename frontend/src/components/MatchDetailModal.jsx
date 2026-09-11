@@ -25,7 +25,7 @@ export default function MatchDetailModal({ match, selectedDate, onClose }) {
         </div>
 
         <div>
-          <span className="text-xs font-bold text-[#0288D1] uppercase">
+          <span className="text-xs font-bold text-[#076A9F] uppercase">
             {match.categoria}
           </span>
           <h3 className="text-lg font-black text-slate-900 leading-tight">
@@ -61,7 +61,7 @@ export default function MatchDetailModal({ match, selectedDate, onClose }) {
 
         <button 
           onClick={onClose}
-          className="w-full py-3 bg-[#0288D1] text-white font-bold rounded-xl text-xs shadow-md transition"
+          className="w-full py-3 bg-[#076A9F] text-white font-bold rounded-xl text-xs shadow-md transition"
         >
           Entendido
         </button>

@@ -4,29 +4,49 @@ import Header from './components/Header'
 import BottomNav from './components/BottomNav'
 import MatchDetailModal from './components/MatchDetailModal'
 import LoginView from './views/LoginView'
+import RegisterView from './views/RegisterView'
 import PartidosView from './views/PartidosView'
 import CanchasView from './views/CanchasView'
 import ConvocatoriasView from './views/ConvocatoriasView'
+import UserManagement from './pages/userManagement'
+import ProfileModal from './components/ProfileModal'
+
+const storedUser = JSON.parse(localStorage.getItem('usuario') || 'null')
 
 export default function App() {
   // NUEVO: Verificamos si existe un token en la memoria. !! lo convierte en true/false
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [userRole, setUserRole] = useState('DT')
+  const [showRegister, setShowRegister] = useState(false)
+  const [userRole, setUserRole] = useState(storedUser?.rol || 'DT')
+  const [currentUser, setCurrentUser] = useState(storedUser)
 
   const [currentTab, setCurrentTab] = useState('partidos')
   const [selectedDate, setSelectedDate] = useState('2026-09-20')
   const [selectedMatch, setSelectedMatch] = useState(null)
+  const [showProfileEditor, setShowProfileEditor] = useState(false)
 
-  const handleLogin = () => {
+  const handleLogin = (user) => {
+    setShowRegister(false)
+    setCurrentUser(user)
+    setUserRole(user.rol)
     setIsAuthenticated(true)
+    if (user.rol === 'JUGADOR') setCurrentTab('partidos')
+  }
+
+  const handleProfileUpdated = (updatedUser) => {
+    const nextUser = { ...currentUser, ...updatedUser, rol: currentUser.rol, rol_id: currentUser.rol_id }
+    setCurrentUser(nextUser)
+    localStorage.setItem('usuario', JSON.stringify(nextUser))
+    setShowProfileEditor(false)
   }
 
   // NUEVO: Logout real destruyendo la sesión
   const handleLogout = () => {
     localStorage.removeItem('token') // Borramos el token
     localStorage.removeItem('usuario') // Borramos los datos del usuario
+    setCurrentUser(null)
     setIsAuthenticated(false) // Devolvemos al usuario al Login
     setEmail('')
     setPassword('')
@@ -35,15 +55,16 @@ export default function App() {
 
   // Si no está autenticado, mostramos LoginView
   if (!isAuthenticated) {
+    if (showRegister) return <RegisterView onBack={() => setShowRegister(false)} />
+
     return (
       <LoginView 
         email={email}
         setEmail={setEmail}
         password={password}
         setPassword={setPassword}
-        userRole={userRole}
-        setUserRole={setUserRole}
         onLogin={handleLogin}
+        onShowRegister={() => setShowRegister(true)}
       />
     )
   }
@@ -51,7 +72,7 @@ export default function App() {
   // Si está autenticado, mostramos el sistema
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-between max-w-md mx-auto border-x border-slate-200 font-sans">
-      <Header userRole={userRole} onLogout={handleLogout} />
+      <Header user={currentUser} userRole={userRole} onLogout={handleLogout} onEditProfile={() => setShowProfileEditor(true)} />
 
       <main className="p-4 flex-1 overflow-y-auto space-y-4">
         {currentTab === 'partidos' && (
@@ -63,6 +84,7 @@ export default function App() {
         )}
         {currentTab === 'canchas' && <CanchasView />}
         {currentTab === 'convocatorias' && <ConvocatoriasView />}
+        {currentTab === 'usuarios' && userRole === 'COORDINADOR' && <UserManagement />}
       </main>
 
       <MatchDetailModal 
@@ -71,7 +93,15 @@ export default function App() {
         onClose={() => setSelectedMatch(null)} 
       />
 
-      <BottomNav currentTab={currentTab} setCurrentTab={setCurrentTab} />
+      {showProfileEditor && (
+        <ProfileModal
+          user={currentUser}
+          onClose={() => setShowProfileEditor(false)}
+          onUpdated={handleProfileUpdated}
+        />
+      )}
+
+      <BottomNav currentTab={currentTab} setCurrentTab={setCurrentTab} userRole={userRole} />
     </div>
   )
 }
