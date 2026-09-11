@@ -1,45 +1,49 @@
 import React, { useState } from 'react'
-import { Mail, Lock } from 'lucide-react'
-import api from '../services/api' // NUEVO: Importamos nuestro cartero
+import { Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
+import api from '../services/api'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
-export default function LoginView({
-  email, setEmail, password, setPassword, userRole, setUserRole, onLogin
-}) {
-  const [errorMensaje, setErrorMensaje] = useState(''); // Estado para guardar errores
-  const [cargando, setCargando] = useState(false); // Para el spinner del botón
+export default function LoginView() {
+  const { login } = useAuth()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [errorMensaje, setErrorMensaje] = useState('')
+  const [exitoMensaje, setExitoMensaje] = useState('')
+  const [cargando, setCargando] = useState(false)
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Evita que la página recargue
-    setErrorMensaje('');
-    setCargando(true);
+    e.preventDefault()
+    setErrorMensaje('')
+    setExitoMensaje('')
+    setCargando(true)
 
     try {
-      // 1. Enviamos los datos al backend usando axios (api)
       const response = await api.post('/auth/login', { 
-        email: email, 
-        password: password 
-      });
+        email, 
+        password 
+      })
 
-      // 2. Si es exitoso, guardamos el token y datos en la memoria del celular
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
+      const { token, usuario } = response.data
+      login(token, usuario)
 
-      // 3. Avisamos a la app que ya entramos
-      onLogin();
+      setExitoMensaje('¡Bienvenido! Redirigiendo...')
+      setTimeout(() => {
+        navigate('/partidos')
+      }, 1500)
 
     } catch (error) {
-      // 4. Si falla, capturamos el mensaje del backend y lo mostramos
-      console.error('Detalle del error en Login:', error);
-      setErrorMensaje(error.response?.data?.mensaje || 'Error al conectar al servidor');
+      console.error('Detalle del error en Login:', error)
+      setErrorMensaje(error.response?.data?.mensaje || 'Error al conectar al servidor')
     } finally {
-      setCargando(false);
+      setCargando(false)
     }
-  };
+  }
 
   return (
     <main className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 border border-slate-100">
-        
         <div className="text-center mb-6">
           <div className="w-20 h-20 mx-auto mb-3 flex items-center justify-center">
             <img src="/icons/icon-192x192.png" alt="Logo" className="w-full h-full object-contain rounded-2xl" />
@@ -47,21 +51,32 @@ export default function LoginView({
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">SportSync</h1>
         </div>
 
-        {/* NUEVO: Cartel rojo de error si fallan las credenciales */}
         {errorMensaje && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs font-bold rounded-xl text-center">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs font-bold rounded-xl text-center flex items-center justify-center gap-2">
+            <AlertCircle size={16} />
             {errorMensaje}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4"> {/* Cambiado a handleSubmit */}
+        {exitoMensaje && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-600 text-xs font-bold rounded-xl text-center flex items-center justify-center gap-2">
+            <CheckCircle size={16} />
+            {exitoMensaje}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Correo</label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-3 text-slate-400" size={18} />
               <input 
-                type="email" value={email} onChange={(e) => setEmail(e.target.value)} 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                autoComplete="email"
+                disabled={cargando}
               />
             </div>
           </div>
@@ -70,8 +85,12 @@ export default function LoginView({
             <div className="relative">
               <Lock className="absolute left-3.5 top-3 text-slate-400" size={18} />
               <input 
-                type="password" value={password} onChange={(e) => setPassword(e.target.value)} 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                autoComplete="current-password"
+                disabled={cargando}
               />
             </div>
           </div>
@@ -79,12 +98,24 @@ export default function LoginView({
           <button 
             type="submit" 
             disabled={cargando}
-            className="w-full py-3 bg-[#0288D1] text-white font-bold rounded-xl shadow-lg mt-2"
+            className="w-full py-3 bg-[#0288D1] text-white font-bold rounded-xl shadow-lg mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {cargando ? 'Ingresando...' : 'Iniciar Sesión'}
           </button>
         </form>
+
+        <div className="mt-6 text-center text-sm text-slate-600">
+          <span>¿No tenés cuenta? </span>
+          <button
+            type="button"
+            onClick={() => navigate('/register')}
+            className="text-[#0288D1] font-bold hover:underline"
+            disabled={cargando}
+          >
+            Registrarse
+          </button>
+        </div>
       </div>
     </main>
-  );
+  )
 }

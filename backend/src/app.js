@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const authRoutes = require('./routes/authRoutes'); // NUEVO: Importamos las rutas
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
@@ -22,9 +22,13 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Backend SportSync operativo' });
 });
 
-app.use('/api/auth', authRoutes); // NUEVO: Le decimos a la app que use las rutas en esa
+app.use('/api/auth', authRoutes);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor backend corriendo en el puerto ${PORT}`);
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Servidor backend corriendo en el puerto ${PORT}`);
+  });
+}
+
+module.exports = app;
