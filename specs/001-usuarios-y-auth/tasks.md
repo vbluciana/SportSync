@@ -25,11 +25,11 @@
 - [ ] **T1.2.4 (Frontend):** Implementar función de Logout, limpiar estado global/local y programar redirección a `/login` [RF04.3].
 
 ### [US1.5] Auto-Registro de Jugadores (Fail-Fast)
-- [ ] **T1.5.1 (Backend/Test):** Escribir prueba de integración con Supertest para validar colisión de datos duplicados y asignación forzada de rol.
-- [ ] **T1.5.2 (Backend):** Crear controlador para `POST /api/auth/register`. En el servicio, ignorar `req.body.rol` y forzar de manera inmutable la creación del perfil con rol `Jugador` [RF01.1, CL-01].
-- [ ] **T1.5.3 (Backend):** Implementar captura de error de unicidad en base de datos para Email/DNI, retornando contrato estricto HTTP 409 [RF01.2, CL-02].
-- [ ] **T1.5.4 (Frontend):** Diseñar vista `RegisterView.jsx` (Mobile-First) con validación de coincidencia de contraseñas y enlace hacia la vista de Login. 
-- [ ] **QA/Validación:** Intentar registrar dos veces el mismo email y comprobar que la UI capture el HTTP 409 y muestre el mensaje visual [QA-05].
+- [X] **T1.5.1 (Backend/Test):** Escribir prueba de integración con Supertest para validar colisión de datos duplicados y asignación forzada de rol.
+- [X] **T1.5.2 (Backend):** Crear controlador para `POST /api/auth/register`. En el servicio, ignorar `req.body.rol` y forzar de manera inmutable la creación del perfil con rol `Jugador` [RF01.1, CL-01].
+- [X] **T1.5.3 (Backend):** Implementar captura de error de unicidad en base de datos para Email/DNI, retornando contrato estricto HTTP 409 [RF01.2, CL-02].
+- [X] **T1.5.4 (Frontend):** Diseñar vista `RegisterView.jsx` (Mobile-First) con validación de coincidencia de contraseñas y enlace hacia la vista de Login. 
+- [X] **QA/Validación:** Intentar registrar dos veces el mismo email y comprobar que la UI capture el HTTP 409 y muestre el mensaje visual [QA-05].
 
 ### [US1.4] Gestor de Perfiles y Categorías Asignadas
 - [ ] **T1.4.1 (Backend):** Implementar endpoint `GET /api/users/profile`. Si el rol del usuario en el token es `Director Técnico`, incluir un JOIN/consulta a la tabla de planteles para traer las ramas/categorías asignadas [RF03.1, RF03.3].
